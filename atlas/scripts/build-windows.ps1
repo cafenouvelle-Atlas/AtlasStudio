@@ -17,7 +17,16 @@ try {
     Invoke-Checked git @('rev-parse', 'HEAD')
     Invoke-Checked cmake @('--version')
     Invoke-Checked perl @('--version')
-    Invoke-Checked pkg-config @('--version')
+    # Strawberry includes an extensionless Perl pkg-config wrapper that PowerShell
+    # can launch but CMake execute_process cannot. Pin Chocolatey's native binary.
+    $pkgConfigRoot = Join-Path $env:ChocolateyInstall 'lib/pkgconfiglite'
+    $pkgConfig = Get-ChildItem $pkgConfigRoot -Recurse -File -Filter 'pkg-config.exe' |
+        Select-Object -First 1
+    if (-not $pkgConfig) { throw "Native pkg-config.exe missing under $pkgConfigRoot" }
+    $pkgConfigExe = $pkgConfig.FullName.Replace('\', '/')
+    Write-Output "Using native pkg-config: $pkgConfigExe"
+    Invoke-Checked $pkgConfigExe @('--version')
+    $env:PKG_CONFIG_EXECUTABLE = $pkgConfigExe
     $vswhere = "${env:ProgramFiles(x86)}/Microsoft Visual Studio/Installer/vswhere.exe"
     $vs = & $vswhere -version '[17.0,18.0)' -products '*' -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -latest -property installationPath
     if (-not $vs) { throw 'Visual Studio 2022 C++ desktop tools are required.' }
@@ -30,7 +39,7 @@ try {
     $generator = @('-G', 'Visual Studio 17 2022', '-A', 'x64', "-DCMAKE_GENERATOR_INSTANCE=$vs")
     Invoke-Checked cmake (@('-S', 'deps', '-B', 'deps/build') + $generator + @("-DDESTDIR=$deps", '-DCMAKE_BUILD_TYPE=Release', '-DDEP_DEBUG=OFF'))
     Invoke-Checked cmake @('--build', 'deps/build', '--config', 'Release', '--parallel', '2')
-    Invoke-Checked cmake (@('-S', '.', '-B', 'build') + $generator + @('-DBBL_RELEASE_TO_PUBLIC=1', '-DBBL_INTERNAL_TESTING=0', "-DCMAKE_PREFIX_PATH=$deps/usr/local", "-DCMAKE_INSTALL_PREFIX=$install", '-DCMAKE_BUILD_TYPE=Release', "-DWIN10SDK_PATH=$($sdk.FullName)", '-DSLIC3R_BUILD_TESTS=ON'))
+    Invoke-Checked cmake (@('-S', '.', '-B', 'build') + $generator + @('-DBBL_RELEASE_TO_PUBLIC=1', '-DBBL_INTERNAL_TESTING=0', "-DCMAKE_PREFIX_PATH=$deps/usr/local", "-DCMAKE_INSTALL_PREFIX=$install", '-DCMAKE_BUILD_TYPE=Release', "-DWIN10SDK_PATH=$($sdk.FullName)", '-DSLIC3R_BUILD_TESTS=ON', "-DPKG_CONFIG_EXECUTABLE:FILEPATH=$pkgConfigExe"))
     Invoke-Checked cmake @('--build', 'build', '--target', 'install', '--config', 'Release', '--parallel', '2')
     # Test executables may require runtime libraries staged by the install target.
     $env:PATH = "$install;$deps/usr/local/bin;$deps/usr/local/bin/occt;$env:PATH"
