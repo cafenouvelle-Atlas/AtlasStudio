@@ -23,7 +23,7 @@ function(atlas_fix_test_build)
     target_link_libraries(atlas_test_support PUBLIC libslic3r libcurl
         OpenSSL::SSL OpenSSL::Crypto ${wxWidgets_LIBRARIES})
     foreach(test_target IN ITEMS libslic3r_tests fff_print_tests sla_print_tests
-            fila_manager_tests filament_group_tests
+            filament_group_tests
             support_material_on_wipe_tower_tests periodic_modifier_tests)
         if(TARGET ${test_target})
             target_link_libraries(${test_target} atlas_test_support)
@@ -40,6 +40,9 @@ function(atlas_fix_test_build)
     foreach(legacy_target IN ITEMS libnest2d_tests libslic3r_tests fff_print_tests sla_print_tests)
         set_property(TARGET ${legacy_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
     endforeach()
+    # FilamentSpool serialization now calls GUI_App's tray-label formatter.
+    # Use its real implementation, not unresolved-symbol flags or fake stubs.
+    target_link_libraries(fila_manager_tests libslic3r_gui ws2_32 uxtheme setupapi user32)
     # DevUtil.h uses boost::format without including it in the slim test build.
     target_compile_options(fila_manager_tests PRIVATE /FIboost/format.hpp)
 endfunction()
