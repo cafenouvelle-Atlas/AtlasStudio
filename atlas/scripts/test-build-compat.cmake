@@ -17,6 +17,7 @@ function(atlas_fix_test_build)
     target_compile_definitions(test_common INTERFACE ${wxWidgets_DEFINITIONS})
     add_library(atlas_test_support STATIC
         "${PROJECT_SOURCE_DIR}/src/slic3r/Utils/Http.cpp"
+        "${PROJECT_SOURCE_DIR}/src/slic3r/Utils/BBLUtil.cpp"
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-nanosvg.cpp")
     target_include_directories(atlas_test_support PRIVATE "${PROJECT_SOURCE_DIR}/src")
     target_link_libraries(atlas_test_support PUBLIC libslic3r libcurl
@@ -51,5 +52,20 @@ function(atlas_fix_test_build)
     list(REMOVE_ITEM test_sources "libnest2d_tests_main.cpp")
     set_property(TARGET libnest2d_tests PROPERTY SOURCES "${test_sources};${generated}")
     target_include_directories(libnest2d_tests PRIVATE "${PROJECT_SOURCE_DIR}/tests/libnest2d")
+    # Raster dimension types moved from RasterBase into the sla namespace.
+    # Repair copies of the legacy SLA fixtures, without editing upstream files.
+    get_target_property(sla_sources sla_print_tests SOURCES)
+    set(generated_sla_sources "")
+    foreach(sla_source IN LISTS sla_sources)
+        set(original_sla "${PROJECT_SOURCE_DIR}/tests/sla_print/${sla_source}")
+        file(READ "${original_sla}" sla_contents)
+        string(REPLACE "RasterBase::PixelDim" "PixelDim" sla_contents "${sla_contents}")
+        string(REPLACE "RasterBase::Resolution" "Resolution" sla_contents "${sla_contents}")
+        set(generated_sla "${CMAKE_BINARY_DIR}/atlas-generated/sla_print/${sla_source}")
+        file(WRITE "${generated_sla}" "${sla_contents}")
+        list(APPEND generated_sla_sources "${generated_sla}")
+    endforeach()
+    set_property(TARGET sla_print_tests PROPERTY SOURCES "${generated_sla_sources}")
+    target_include_directories(sla_print_tests PRIVATE "${PROJECT_SOURCE_DIR}/tests/sla_print")
 endfunction()
 cmake_language(DEFER CALL atlas_fix_test_build)

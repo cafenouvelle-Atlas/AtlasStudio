@@ -20,7 +20,12 @@ function Invoke-Checked {
     & $Program @Arguments *> $log
     $commandExit = $LASTEXITCODE
     Get-Content $log -Tail 30 | Write-Output
-    if ($commandExit -ne 0) { throw "$Program failed with exit code $commandExit; see $log" }
+    if ($commandExit -ne 0) {
+        # Keep every compiler error visible even when it precedes the last 30 lines.
+        Select-String -Path $log -Pattern 'error C[0-9]+|error LNK[0-9]+|fatal error|CMake Error' |
+            ForEach-Object { Write-Output $_.Line }
+        throw "$Program failed with exit code $commandExit; see $log"
+    }
 }
 try {
     Invoke-Checked git @('rev-parse', 'HEAD')
