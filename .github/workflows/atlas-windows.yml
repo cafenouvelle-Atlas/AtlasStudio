@@ -34,9 +34,42 @@ jobs:
           'C:\Strawberry\c\bin' >> $env:GITHUB_PATH
       - name: Verify unchanged upstream application
         run: python atlas/scripts/verify_baseline.py
-      - name: Build, test and stage Windows x64
+      - name: Verify Windows toolchain before long builds
+        id: toolchain
         shell: pwsh
-        run: ./atlas/scripts/build-windows.ps1
+        run: |
+          ./atlas/scripts/build-windows.ps1 -Stage Preflight
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          # Invalidate cached native libraries whenever the runner image changes.
+          "image=$env:ImageVersion" >> $env:GITHUB_OUTPUT
+      - name: Restore Windows dependencies
+        id: deps
+        uses: actions/cache/restore@v4
+        with:
+          path: deps/build
+          key: atlas-deps-win2022-x64-cmake3316-${{ steps.toolchain.outputs.image }}-${{ hashFiles('deps/**', 'cmake/**') }}
+      - name: Compile dependencies
+        if: steps.deps.outputs.cache-hit != 'true'
+        shell: pwsh
+        run: ./atlas/scripts/build-windows.ps1 -Stage Dependencies
+      - name: Save successful dependencies before application build
+        if: steps.deps.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: deps/build
+          key: ${{ steps.deps.outputs.cache-primary-key }}
+      - name: Configure Windows application
+        shell: pwsh
+        run: ./atlas/scripts/build-windows.ps1 -Stage Configure
+      - name: Compile and install application and tests
+        shell: pwsh
+        run: ./atlas/scripts/build-windows.ps1 -Stage Build
+      - name: Run upstream automated tests
+        shell: pwsh
+        run: ./atlas/scripts/build-windows.ps1 -Stage Test
+      - name: Package portable application and source
+        shell: pwsh
+        run: ./atlas/scripts/build-windows.ps1 -Stage Package
       - name: Upload portable baseline and source
         uses: actions/upload-artifact@v4
         with:
