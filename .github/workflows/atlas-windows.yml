@@ -1,0 +1,56 @@
+name: Atlas Windows baseline
+on:
+  workflow_dispatch:
+  push:
+    branches: [atlas/main]
+  pull_request:
+    branches: [atlas/main]
+permissions:
+  contents: read
+concurrency:
+  group: atlas-windows-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  baseline:
+    runs-on: windows-2022
+    timeout-minutes: 360
+    env:
+      CMAKE_BUILD_PARALLEL_LEVEL: 2
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install CMake and upstream tools
+        shell: pwsh
+        run: |
+          python -m pip install cmake==3.31.6
+          choco install strawberryperl pkgconfiglite -y --no-progress
+          if ($LASTEXITCODE -ne 0) { throw 'Dependency installation failed' }
+          # Chocolatey changes are not inherited by this running shell.
+          'C:\Strawberry\perl\bin' >> $env:GITHUB_PATH
+          'C:\Strawberry\c\bin' >> $env:GITHUB_PATH
+      - name: Verify unchanged upstream application
+        run: python atlas/scripts/verify_baseline.py
+      - name: Build, test and stage Windows x64
+        shell: pwsh
+        run: ./atlas/scripts/build-windows.ps1
+      - name: Upload portable baseline and source
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-upstream-baseline-${{ github.sha }}
+          path: atlas-dist/*
+          if-no-files-found: error
+      - name: Upload diagnostics even on failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-windows-diagnostics-${{ github.run_id }}
+          path: |
+            atlas-logs/
+            build/Testing/Temporary/
+            build/CMakeFiles/CMakeConfigureLog.yaml
+            deps/build/CMakeFiles/CMakeConfigureLog.yaml
+          if-no-files-found: warn
