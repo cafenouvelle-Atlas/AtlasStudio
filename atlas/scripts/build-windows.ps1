@@ -21,6 +21,10 @@ function Invoke-Checked {
     $commandExit = $LASTEXITCODE
     Get-Content $log -Tail 30 | Write-Output
     if ($commandExit -ne 0) {
+        # CTest failures need assertion context, not only the final summary.
+        if ($Program -eq 'ctest') {
+            Get-Content $log | Write-Output
+        }
         # Keep every compiler error visible even when it precedes the last 30 lines.
         Select-String -Path $log -Pattern 'error C[0-9]+|error LNK[0-9]+|fatal error|CMake Error' |
             ForEach-Object { Write-Output $_.Line }
