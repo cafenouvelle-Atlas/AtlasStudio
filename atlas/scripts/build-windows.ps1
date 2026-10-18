@@ -61,6 +61,7 @@ try {
         Invoke-Checked cmake @('--build', 'deps/build', '--config', 'Release', '--parallel', '2')
     }
     if ($Stage -in @('All', 'Configure')) {
+        Invoke-Checked python @('atlas/scripts/apply-branding.py')
         Invoke-Checked cmake (@('-S', '.', '-B', 'build') + $generator + @('-DBBL_RELEASE_TO_PUBLIC=1', '-DBBL_INTERNAL_TESTING=0', "-DCMAKE_PREFIX_PATH=$deps/usr/local", "-DCMAKE_INSTALL_PREFIX=$install", '-DCMAKE_BUILD_TYPE=Release', "-DWIN10SDK_PATH=$($sdk.FullName)", '-DSLIC3R_BUILD_TESTS=ON', "-DCMAKE_PROJECT_INCLUDE=$root/atlas/scripts/test-build-compat.cmake", "-DPKG_CONFIG_EXECUTABLE:FILEPATH=$pkgConfigExe"))
     }
     if ($Stage -in @('All', 'Build')) {
@@ -72,10 +73,18 @@ try {
         Invoke-Checked ctest @('--test-dir', 'build', '-C', 'Release', '--output-on-failure', '--exclude-regex', '^(libnest2d_tests|libslic3r_tests|fff_print_tests|sla_print_tests)$', '--no-tests=error', '--timeout', '600', '--output-junit', "$root/atlas-logs/tests.xml")
     }
     if ($Stage -in @('All', 'Package')) {
-        if (-not (Test-Path "$install/bambu-studio.exe")) { throw 'Installed GUI executable missing.' }
+        if (-not (Test-Path "$install/atlas-studio.exe")) { throw 'Installed GUI executable missing.' }
         if (-not (Test-Path "$install/resources/profiles/BBL.json")) { throw 'Installed printer profiles missing.' }
         Copy-Item LICENSE "$install/LICENSE"
-        Copy-Item atlas/README.md "$install/ATLAS-BASELINE-README.md"
+        @'
+Atlas Studio - Windows development candidate
+Launch atlas-studio.exe from this extracted folder, with all DLLs and resources.
+Based on Bambu Studio; original copyright and AGPL notices remain included.
+See TEST-COVERAGE.txt and CTEST-RESULTS.xml for actual validation limitations.
+source.zip contains the pinned upstream source and Atlas build scripts.
+The build applies atlas/scripts/apply-branding.py before CMake configuration;
+this reproducible overlay changes display names and the Windows launcher only.
+'@ | Set-Content "$install/ATLAS-README.txt"
         $coverage = @'
 Development baseline: only the selected regression tests run.
 Deferred upstream suites: libnest2d_tests, libslic3r_tests, fff_print_tests,
@@ -104,7 +113,7 @@ remain required. See ATLAS-BUILD-STATUS.md in the development workspace.
         # A public release still needs the dependency license/source audit in FOUNDATION.md.
         Invoke-Checked tar @('-czf', 'atlas-dist/dependency-build-inputs.tar.gz', '--exclude=BambuStudio_dep', '--exclude=*.obj', '--exclude=*.pdb', '--exclude=*.lib', 'deps/build')
         Invoke-Checked git @('archive', '--format=zip', '--output=atlas-dist/source.zip', 'HEAD')
-        Compress-Archive -Path "$install/*" -DestinationPath atlas-dist/development-candidate-windows-x64.zip -Force
+        Compress-Archive -Path "$install/*" -DestinationPath atlas-dist/atlas-studio-windows-x64.zip -Force
         $hashLines = Get-ChildItem atlas-dist -File |
             Where-Object Name -ne 'SHA256SUMS.txt' |
             Get-FileHash -Algorithm SHA256 |
