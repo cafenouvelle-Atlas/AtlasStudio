@@ -83,6 +83,12 @@ sla_print_tests. They fail to compile against current upstream APIs.
 This is NOT a full upstream test-suite pass. Windows GUI and printer testing
 remain required. See ATLAS-BUILD-STATUS.md in the development workspace.
 '@
+        [xml]$testReport = Get-Content "$root/atlas-logs/tests.xml" -Raw
+        $suite = $testReport.DocumentElement
+        $testStatus = "Selected CTest results: tests=$($suite.GetAttribute('tests')); failures=$($suite.GetAttribute('failures')); errors=$($suite.GetAttribute('errors')); disabled=$($suite.GetAttribute('disabled'))."
+        $coverage = "DEVELOPMENT CANDIDATE - validation incomplete. Do not use for physical printing.`n$testStatus`n" + $coverage
+        Copy-Item "$root/atlas-logs/tests.xml" "$install/CTEST-RESULTS.xml"
+        Copy-Item "$root/atlas-logs/tests.xml" atlas-dist/CTEST-RESULTS.xml
         $coverage | Out-File "$install/TEST-COVERAGE.txt"
         $coverage | Out-File atlas-dist/TEST-COVERAGE.txt
         # Preserve all checked-in license files with their original directory structure.
@@ -98,9 +104,9 @@ remain required. See ATLAS-BUILD-STATUS.md in the development workspace.
         # A public release still needs the dependency license/source audit in FOUNDATION.md.
         Invoke-Checked tar @('-czf', 'atlas-dist/dependency-build-inputs.tar.gz', '--exclude=BambuStudio_dep', '--exclude=*.obj', '--exclude=*.pdb', '--exclude=*.lib', 'deps/build')
         Invoke-Checked git @('archive', '--format=zip', '--output=atlas-dist/source.zip', 'HEAD')
-        Compress-Archive -Path "$install/*" -DestinationPath atlas-dist/upstream-baseline-windows-x64.zip -Force
+        Compress-Archive -Path "$install/*" -DestinationPath atlas-dist/development-candidate-windows-x64.zip -Force
         Get-ChildItem atlas-dist -File | Get-FileHash -Algorithm SHA256 | Format-Table -AutoSize | Out-File atlas-dist/SHA256SUMS.txt
-        'Application compilation and selected CTest suites passed; four legacy suites deferred. GUI and printer tests remain required.' | Out-File atlas-dist/STATUS.txt
+        $coverage | Out-File atlas-dist/STATUS.txt
     }
 } finally {
     Stop-Transcript

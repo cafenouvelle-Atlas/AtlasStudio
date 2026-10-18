@@ -40,6 +40,23 @@ function(atlas_fix_test_build)
     foreach(legacy_target IN ITEMS libnest2d_tests libslic3r_tests fff_print_tests sla_print_tests)
         set_property(TARGET ${legacy_target} PROPERTY EXCLUDE_FROM_ALL TRUE)
     endforeach()
+    # A single fixture mesh already has a valid instance at the origin. The
+    # legacy InfiniteBed arrangement helper now rejects it before any slicing
+    # assertions run. Preserve arrangement for fixtures that need placement.
+    set(fixture_source "${PROJECT_SOURCE_DIR}/tests/fff_print/test_data.cpp")
+    file(READ "${fixture_source}" fixture_text)
+    string(REPLACE
+        "    arrange_objects(model, InfiniteBed{}, ArrangeParams{ scaled(min_object_distance(config))});"
+        "    if (model.objects.size() > 1)\n        arrange_objects(model, InfiniteBed{}, ArrangeParams{ scaled(min_object_distance(config))});"
+        fixture_text "${fixture_text}")
+    set(fixture_copy "${PROJECT_BINARY_DIR}/atlas-test-data.cpp")
+    file(WRITE "${fixture_copy}" "${fixture_text}")
+    foreach(fixture_target IN ITEMS support_material_on_wipe_tower_tests periodic_modifier_tests)
+        get_target_property(fixture_sources ${fixture_target} SOURCES)
+        list(REMOVE_ITEM fixture_sources test_data.cpp)
+        set_property(TARGET ${fixture_target} PROPERTY SOURCES "${fixture_sources};${fixture_copy}")
+        target_include_directories(${fixture_target} PRIVATE "${PROJECT_SOURCE_DIR}/tests/fff_print")
+    endforeach()
     # FilamentSpool serialization now calls GUI_App's tray-label formatter.
     # Use its real implementation, not unresolved-symbol flags or fake stubs.
     target_link_libraries(fila_manager_tests libslic3r_gui ws2_32 uxtheme setupapi user32)
