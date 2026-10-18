@@ -62,6 +62,7 @@ try {
     }
     if ($Stage -in @('All', 'Configure')) {
         Invoke-Checked python @('atlas/scripts/apply-branding.py')
+        Invoke-Checked python @('atlas/scripts/apply-centauri-profile.py')
         Invoke-Checked cmake (@('-S', '.', '-B', 'build') + $generator + @('-DBBL_RELEASE_TO_PUBLIC=1', '-DBBL_INTERNAL_TESTING=0', "-DCMAKE_PREFIX_PATH=$deps/usr/local", "-DCMAKE_INSTALL_PREFIX=$install", '-DCMAKE_BUILD_TYPE=Release', "-DWIN10SDK_PATH=$($sdk.FullName)", '-DSLIC3R_BUILD_TESTS=ON', "-DCMAKE_PROJECT_INCLUDE=$root/atlas/scripts/test-build-compat.cmake", "-DPKG_CONFIG_EXECUTABLE:FILEPATH=$pkgConfigExe"))
     }
     if ($Stage -in @('All', 'Build')) {
@@ -76,6 +77,7 @@ try {
         if (-not (Test-Path "$install/atlas-studio.exe")) { throw 'Installed GUI executable missing.' }
         if (-not (Test-Path "$install/resources/profiles/BBL.json")) { throw 'Installed printer profiles missing.' }
         Copy-Item LICENSE "$install/LICENSE"
+        Copy-Item resources/profiles/Elegoo/ATLAS-CENTAURI-SETUP.txt "$install/ATLAS-CENTAURI-SETUP.txt"
         @'
 Atlas Studio - Windows development candidate
 Launch atlas-studio.exe from this extracted folder, with all DLLs and resources.
@@ -94,6 +96,13 @@ remain required. See ATLAS-BUILD-STATUS.md in the development workspace.
 '@
         [xml]$testReport = Get-Content "$root/atlas-logs/tests.xml" -Raw
         $suite = $testReport.DocumentElement
+        $profileCases = @($testReport.SelectNodes("//testcase[@name='atlas_centauri_profile_tests']"))
+        if ($profileCases.Count -ne 1 -or $profileCases[0].SelectNodes('failure').Count -gt 0 -or
+            $profileCases[0].SelectNodes('error').Count -gt 0 -or
+            $profileCases[0].SelectNodes('skipped').Count -gt 0) {
+            throw 'Centauri Carbon native load/slice/export test did not pass; package blocked.'
+        }
+
         $testStatus = "Selected CTest results: tests=$($suite.GetAttribute('tests')); failures=$($suite.GetAttribute('failures')); errors=$($suite.GetAttribute('errors')); disabled=$($suite.GetAttribute('disabled'))."
         $coverage = "DEVELOPMENT CANDIDATE - validation incomplete. Do not use for physical printing.`n$testStatus`n" + $coverage
         Copy-Item "$root/atlas-logs/tests.xml" "$install/CTEST-RESULTS.xml"

@@ -22,6 +22,14 @@ function(atlas_fix_test_build)
     target_include_directories(atlas_test_support PRIVATE "${PROJECT_SOURCE_DIR}/src")
     target_link_libraries(atlas_test_support PUBLIC libslic3r libcurl
         OpenSSL::SSL OpenSSL::Crypto ${wxWidgets_LIBRARIES})
+    add_executable(atlas_centauri_profile_tests
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-centauri-profile.cpp")
+    target_link_libraries(atlas_centauri_profile_tests test_common atlas_test_support)
+    target_compile_definitions(atlas_centauri_profile_tests PRIVATE
+        "ATLAS_SOURCE_ROOT=\"${PROJECT_SOURCE_DIR}\"")
+    add_test(NAME atlas_centauri_profile_tests COMMAND atlas_centauri_profile_tests)
+    set_tests_properties(atlas_centauri_profile_tests PROPERTIES
+        WORKING_DIRECTORY "${PROJECT_BINARY_DIR}")
     foreach(test_target IN ITEMS libslic3r_tests fff_print_tests sla_print_tests
             filament_group_tests
             support_material_on_wipe_tower_tests periodic_modifier_tests)
