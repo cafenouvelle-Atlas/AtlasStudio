@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="94" height="122" viewBox="0 0 128 166">
+  <title>Atlas Studio — layered A startup mark</title>
+  <defs>
+    <linearGradient id="atlas-face" x1="20" y1="20" x2="108" y2="122" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#25DFC1"/>
+      <stop offset="1" stop-color="#1289B6"/>
+    </linearGradient>
+  </defs>
+  <path d="M64 40 112 142H88L76 116H52L40 142H16ZM64 76 56 96H72Z" fill="#102D4A" fill-rule="evenodd"/>
+  <path d="M64 29 112 131H88L76 105H52L40 131H16ZM64 65 56 85H72Z" fill="#17617B" fill-rule="evenodd"/>
+  <path d="M64 18 112 120H88L76 94H52L40 120H16ZM64 54 56 74H72Z" fill="url(#atlas-face)" fill-rule="evenodd"/>
+  <path d="M51 94H77L71 82H57Z" fill="#FFAD45"/>
+  <path d="M64 18 67 25 25 120H16Z" fill="#85F6DF"/>
+</svg>

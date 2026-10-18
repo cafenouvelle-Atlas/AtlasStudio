@@ -24,6 +24,10 @@ PATCHES = {
     'src/slic3r/GUI/MainFrame.cpp': [
         ('SetTitle(title + " - BambuStudio");', 'SetTitle(title + " - Atlas Studio");'),
     ],
+    'src/slic3r/GUI/GUI_App.cpp': [
+        ('bmp_cache.load_svg("splash_logo", logo_size, logo_size)',
+         'bmp_cache.load_svg("atlas_startup_logo", logo_size, logo_size)'),
+    ],
     'src/slic3r/GUI/AboutDialog.cpp': [
         ('_L("Bambu Studio is licensed under ")', '_L("Atlas Studio is licensed under ")'),
         ('_L("Bambu Studio is based on PrusaSlicer by Prusa Research, which is from Slic3r by Alessandro Ranellucci and the RepRap community")',
@@ -45,9 +49,15 @@ def apply(root, check=False):
             else:
                 raise RuntimeError(f'Branding anchor changed: {relative}: {before}')
         planned[path] = text.encode('utf-8')
+    asset = Path(__file__).with_name('atlas-startup-logo.svg').read_bytes()
+    # This SVG uses only paths and a gradient supported by the existing renderer.
+    from xml.etree import ElementTree
+    ElementTree.fromstring(asset)
+    planned[root / 'resources/images/atlas_startup_logo.svg'] = asset
     if not check:
         for path, content in planned.items():
-            if path.read_bytes() != content:
+            if not path.exists() or path.read_bytes() != content:
+                path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(content)
     print(f'PASS: Atlas Studio branding {"validated" if check else "applied"} in {len(planned)} files')
 
