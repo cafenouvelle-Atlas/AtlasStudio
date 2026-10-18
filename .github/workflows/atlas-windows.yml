@@ -62,18 +62,22 @@ jobs:
         shell: pwsh
         run: ./atlas/scripts/build-windows.ps1 -Stage Configure
       - name: Compile and install application and tests
+        id: compile
         shell: pwsh
         run: ./atlas/scripts/build-windows.ps1 -Stage Build
       - name: Run upstream automated tests
         shell: pwsh
         run: ./atlas/scripts/build-windows.ps1 -Stage Test
       - name: Package portable application and source
+        id: package
+        if: always() && steps.compile.outcome == 'success'
         shell: pwsh
         run: ./atlas/scripts/build-windows.ps1 -Stage Package
-      - name: Upload portable baseline and source
+      - name: Upload development candidate and source
+        if: always() && steps.package.outcome == 'success'
         uses: actions/upload-artifact@v4
         with:
-          name: atlas-upstream-baseline-${{ github.sha }}
+          name: atlas-development-candidate-${{ github.sha }}
           path: atlas-dist/*
           if-no-files-found: error
       - name: Upload diagnostics even on failure
