@@ -24,7 +24,8 @@ function(atlas_fix_test_build)
         OpenSSL::SSL OpenSSL::Crypto ${wxWidgets_LIBRARIES})
     add_executable(atlas_centauri_profile_tests
         "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-centauri-profile.cpp")
-    target_link_libraries(atlas_centauri_profile_tests test_common atlas_test_support)
+    target_link_libraries(atlas_centauri_profile_tests test_common atlas_test_support dbghelp)
+    target_link_options(atlas_centauri_profile_tests PRIVATE /DEBUG /OPT:REF /OPT:ICF)
     target_compile_definitions(atlas_centauri_profile_tests PRIVATE
         "ATLAS_SOURCE_ROOT=\"${PROJECT_SOURCE_DIR}\"")
     add_test(NAME atlas_centauri_profile_tests COMMAND atlas_centauri_profile_tests)

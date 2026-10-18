@@ -10,9 +10,44 @@
 #include <iterator>
 #include <map>
 
+#ifdef _WIN32
+#include <Windows.h>
+#include <DbgHelp.h>
+#include <cstdio>
+// Diagnostic only: preserve failure handling while showing the native fault stack.
+static LONG CALLBACK atlas_crash_trace(EXCEPTION_POINTERS* exception)
+{
+    if (exception->ExceptionRecord->ExceptionCode != EXCEPTION_ACCESS_VIOLATION)
+        return EXCEPTION_CONTINUE_SEARCH;
+    HANDLE process = GetCurrentProcess();
+    SymSetOptions(SYMOPT_UNDNAME | SYMOPT_DEFERRED_LOADS | SYMOPT_LOAD_LINES);
+    SymInitialize(process, nullptr, TRUE);
+    void* frames[64];
+    const auto count = CaptureStackBackTrace(0, 64, frames, nullptr);
+    std::fprintf(stderr, "Atlas native access violation at %p\n", exception->ExceptionRecord->ExceptionAddress);
+    for (USHORT i = 0; i < count; ++i) {
+        alignas(SYMBOL_INFO) char storage[sizeof(SYMBOL_INFO) + MAX_SYM_NAME] = {};
+        auto* symbol = reinterpret_cast<SYMBOL_INFO*>(storage);
+        symbol->SizeOfStruct = sizeof(SYMBOL_INFO);
+        symbol->MaxNameLen = MAX_SYM_NAME;
+        DWORD64 displacement = 0;
+        if (SymFromAddr(process, reinterpret_cast<DWORD64>(frames[i]), &displacement, symbol))
+            std::fprintf(stderr, "  %s + 0x%llx\n", symbol->Name, static_cast<unsigned long long>(displacement));
+        else
+            std::fprintf(stderr, "  %p\n", frames[i]);
+    }
+    std::fflush(stderr);
+    return EXCEPTION_CONTINUE_SEARCH;
+}
+#endif
+
 TEST_CASE("Centauri Carbon presets load, slice and export a 20mm cube", "[atlas][centauri]")
 {
     using namespace Slic3r;
+#ifdef _WIN32
+    AddVectoredExceptionHandler(1, atlas_crash_trace);
+#endif
+    set_logging_level(5);
     namespace fs = std::filesystem;
     const fs::path root(ATLAS_SOURCE_ROOT);
     const fs::path profiles = root / "resources/profiles/Elegoo";

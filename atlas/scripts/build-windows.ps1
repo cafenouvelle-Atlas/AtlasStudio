@@ -66,6 +66,11 @@ try {
         Invoke-Checked cmake (@('-S', '.', '-B', 'build') + $generator + @('-DBBL_RELEASE_TO_PUBLIC=1', '-DBBL_INTERNAL_TESTING=0', "-DCMAKE_PREFIX_PATH=$deps/usr/local", "-DCMAKE_INSTALL_PREFIX=$install", '-DCMAKE_BUILD_TYPE=Release', "-DWIN10SDK_PATH=$($sdk.FullName)", '-DSLIC3R_BUILD_TESTS=ON', "-DCMAKE_PROJECT_INCLUDE=$root/atlas/scripts/test-build-compat.cmake", "-DPKG_CONFIG_EXECUTABLE:FILEPATH=$pkgConfigExe"))
     }
     if ($Stage -in @('All', 'Build')) {
+        # Validate the real profile with the engine before the much longer GUI build.
+        # The complete build and test stages still run after this mandatory check.
+        Invoke-Checked cmake @('--build', 'build', '--target', 'atlas_centauri_profile_tests', '--config', 'Release', '--parallel', '2')
+        $env:PATH = "$install;$deps/usr/local/bin;$deps/usr/local/bin/occt;$env:PATH"
+        Invoke-Checked ctest @('--test-dir', 'build', '-C', 'Release', '--output-on-failure', '-R', '^atlas_centauri_profile_tests$', '--no-tests=error', '--timeout', '600', '--output-junit', "$root/atlas-logs/centauri-preflight.xml")
         Invoke-Checked cmake @('--build', 'build', '--target', 'install', '--config', 'Release', '--parallel', '2')
     }
     if ($Stage -in @('All', 'Test')) {
