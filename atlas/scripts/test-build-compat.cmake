@@ -49,6 +49,12 @@ function(atlas_fix_test_build)
         "    arrange_objects(model, InfiniteBed{}, ArrangeParams{ scaled(min_object_distance(config))});"
         "    if (model.objects.size() > 1)\n        arrange_objects(model, InfiniteBed{}, ArrangeParams{ scaled(min_object_distance(config))});"
         fixture_text "${fixture_text}")
+    # GCode export now expects a non-empty parent directory; unique_path alone
+    # returns a bare filename. Use the existing OS temp directory.
+    string(REPLACE
+        "boost::filesystem::path temp = boost::filesystem::unique_path();"
+        "boost::filesystem::path temp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path(\"atlas-%%%%-%%%%.gcode\");"
+        fixture_text "${fixture_text}")
     set(fixture_copy "${PROJECT_BINARY_DIR}/atlas-test-data.cpp")
     file(WRITE "${fixture_copy}" "${fixture_text}")
     foreach(fixture_target IN ITEMS support_material_on_wipe_tower_tests periodic_modifier_tests)

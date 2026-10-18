@@ -105,7 +105,11 @@ remain required. See ATLAS-BUILD-STATUS.md in the development workspace.
         Invoke-Checked tar @('-czf', 'atlas-dist/dependency-build-inputs.tar.gz', '--exclude=BambuStudio_dep', '--exclude=*.obj', '--exclude=*.pdb', '--exclude=*.lib', 'deps/build')
         Invoke-Checked git @('archive', '--format=zip', '--output=atlas-dist/source.zip', 'HEAD')
         Compress-Archive -Path "$install/*" -DestinationPath atlas-dist/development-candidate-windows-x64.zip -Force
-        Get-ChildItem atlas-dist -File | Get-FileHash -Algorithm SHA256 | Format-Table -AutoSize | Out-File atlas-dist/SHA256SUMS.txt
+        $hashLines = Get-ChildItem atlas-dist -File |
+            Where-Object Name -ne 'SHA256SUMS.txt' |
+            Get-FileHash -Algorithm SHA256 |
+            ForEach-Object { "$($_.Hash.ToLowerInvariant())  $(Split-Path $_.Path -Leaf)" }
+        $hashLines | Set-Content atlas-dist/SHA256SUMS.txt
         $coverage | Out-File atlas-dist/STATUS.txt
     }
 } finally {
