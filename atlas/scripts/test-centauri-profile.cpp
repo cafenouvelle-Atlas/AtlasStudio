@@ -1,6 +1,7 @@
 // Atlas Studio official-source Centauri Carbon offline profile smoke test. AGPL-3.0.
 #include <catch_main.hpp>
 #include "libslic3r/Print.hpp"
+#include "libslic3r/GCode/GCodeProcessor.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/TriangleMesh.hpp"
 #include "libslic3r/utils.hpp"
@@ -31,6 +32,8 @@ TEST_CASE("Centauri Carbon presets load, slice and export a 20mm cube", "[atlas]
         INFO(path);
         REQUIRE(fs::exists(path));
         auto substitutions = loaded.load_from_json(path, ForwardCompatibilitySubstitutionRule::Disable, metadata, reason);
+        INFO(reason);
+        REQUIRE(reason.empty());
         REQUIRE(substitutions.empty());
         config.apply(loaded);
     }
@@ -51,7 +54,8 @@ TEST_CASE("Centauri Carbon presets load, slice and export a 20mm cube", "[atlas]
     print.set_status_silent();
     REQUIRE_NOTHROW(print.process());
     const fs::path output = logs / "centauri-20mm-cube.gcode";
-    REQUIRE_NOTHROW(print.export_gcode(output.generic_string(), nullptr, nullptr));
+    GCodeProcessorResult result;
+    REQUIRE_NOTHROW(print.export_gcode(output.generic_string(), &result, nullptr));
     REQUIRE(fs::file_size(output) > 1000);
     std::ifstream input(output);
     const std::string gcode((std::istreambuf_iterator<char>(input)), std::istreambuf_iterator<char>());

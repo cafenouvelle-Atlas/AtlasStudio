@@ -63,6 +63,13 @@ function(atlas_fix_test_build)
         "boost::filesystem::path temp = boost::filesystem::unique_path();"
         "boost::filesystem::path temp = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path(\"atlas-%%%%-%%%%.gcode\");"
         fixture_text "${fixture_text}")
+    # Current GCode export fills layer filament sequences unconditionally.
+    # Supply its real result object as GUI callers do, rather than a null pointer.
+    string(PREPEND fixture_text "#include \"libslic3r/GCode/GCodeProcessor.hpp\"\n")
+    string(REPLACE
+        "print.export_gcode(temp.string(), nullptr, nullptr);"
+        "GCodeProcessorResult result;\n    print.export_gcode(temp.string(), &result, nullptr);"
+        fixture_text "${fixture_text}")
     set(fixture_copy "${PROJECT_BINARY_DIR}/atlas-test-data.cpp")
     file(WRITE "${fixture_copy}" "${fixture_text}")
     foreach(fixture_target IN ITEMS support_material_on_wipe_tower_tests periodic_modifier_tests)

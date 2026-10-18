@@ -9,7 +9,8 @@
     "Inherited settings flattened for independent loading.",
     "ATLAS names and matching defaults/compatibility; only 0.4mm initially.",
     "Single-extruder multi-material disabled; unsupported vendor host type omitted.",
-    "Orca-only settings omitted; actual parse/slice/export must pass engine smoke test."
+    "Orca-only settings omitted; actual parse/slice/export must pass engine smoke test.",
+    "ELEGOO ensure_vertical_shell_thickness=ensure_all maps to Bambu enabled, retaining solid infill near sloping surfaces."
   ],
   "omitted_options": {
     "machine": {
@@ -308,7 +309,7 @@
         "top_shell_thickness": "1.0",
         "bottom_shell_thickness": "0.6",
         "filter_out_gap_fill": "1",
-        "ensure_vertical_shell_thickness": "ensure_all",
+        "ensure_vertical_shell_thickness": "enabled",
         "compatible_printers": [
           "ATLAS - ELEGOO Centauri Carbon 0.4 nozzle"
         ],
