@@ -71,6 +71,11 @@ function(atlas_fix_test_build)
         "print.export_gcode(temp.string(), nullptr, nullptr);"
         "GCodeProcessorResult result;\n    print.export_gcode(temp.string(), &result, nullptr);"
         fixture_text "${fixture_text}")
+    # Construct default dynamic options via their definitions, retaining enum maps.
+    string(REPLACE "DynamicPrintConfig::full_print_config()"
+        "atlas_fixture_defaults()" fixture_text "${fixture_text}")
+    string(PREPEND fixture_text
+        "#include \"libslic3r/PrintConfig.hpp\"\nnamespace Slic3r { static DynamicPrintConfig atlas_fixture_defaults() { DynamicPrintConfig config; config.apply(DynamicPrintConfig::full_print_config()); return config; } }\n")
     set(fixture_copy "${PROJECT_BINARY_DIR}/atlas-test-data.cpp")
     file(WRITE "${fixture_copy}" "${fixture_text}")
     foreach(fixture_target IN ITEMS support_material_on_wipe_tower_tests periodic_modifier_tests)

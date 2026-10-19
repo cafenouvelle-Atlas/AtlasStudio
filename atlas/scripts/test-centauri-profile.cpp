@@ -55,7 +55,16 @@ TEST_CASE("Centauri Carbon presets load, slice and export a 20mm cube", "[atlas]
     fs::create_directories(logs);
     set_resources_dir((root / "resources").generic_string());
     set_data_dir(logs.generic_string());
-    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    // Create options through the definition so enum lookup maps are initialized.
+    DynamicPrintConfig config;
+    config.apply(DynamicPrintConfig::full_print_config());
+    for (const auto& key : config.keys()) {
+        INFO(key);
+        if (const auto* option = dynamic_cast<const ConfigOptionEnumsGeneric*>(config.option(key)))
+            REQUIRE(option->keys_map != nullptr);
+        if (const auto* option = dynamic_cast<const ConfigOptionEnumsGenericNullable*>(config.option(key)))
+            REQUIRE(option->keys_map != nullptr);
+    }
     for (const char* relative : {
         "machine/ATLAS - ELEGOO Centauri Carbon 0.4 nozzle.json",
         "process/ATLAS - 0.20mm Standard @Centauri Carbon.json",
