@@ -49,7 +49,8 @@ TEST_CASE("Creator primitives are bounded, closed solids with correct dimensions
         Model reloaded;
         REQUIRE(load_stl(file.path.string().c_str(), &reloaded));
         REQUIRE(reloaded.objects.size() == 1);
-        REQUIRE(reloaded.objects.front()->mesh().volume() == Approx(mesh.volume()).epsilon(0.001));
+        // load_stl creates geometry without placed instances; compare the imported solid.
+        REQUIRE(reloaded.objects.front()->raw_mesh().volume() == Approx(mesh.volume()).epsilon(0.001));
     }
 }
 
