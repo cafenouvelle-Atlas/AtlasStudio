@@ -246,6 +246,12 @@ set(SLIC3R_GUI_SOURCES
     GUI/I18N.hpp
     GUI/IconManager.cpp
     GUI/IconManager.hpp
+    GUI/AtlasAICreator/CreatorPanel.cpp
+    GUI/AtlasAICreator/CreatorPanel.hpp
+    GUI/AtlasAICreator/PrimitiveGenerator.cpp
+    GUI/AtlasAICreator/PrimitiveGenerator.hpp
+    GUI/AtlasAICreator/ModelSearch.hpp
+    GUI/AtlasAICreator/PrimitiveRequest.hpp
     GUI/MainFrame.cpp
     GUI/MainFrame.hpp
     GUI/PerfTrace.cpp
