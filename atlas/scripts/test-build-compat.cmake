@@ -31,6 +31,16 @@ function(atlas_fix_test_build)
     add_test(NAME atlas_centauri_profile_tests COMMAND atlas_centauri_profile_tests)
     set_tests_properties(atlas_centauri_profile_tests PROPERTIES
         WORKING_DIRECTORY "${PROJECT_BINARY_DIR}")
+    add_executable(atlas_ai_creator_request_tests
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-ai-creator-request.cpp")
+    target_include_directories(atlas_ai_creator_request_tests PRIVATE "${PROJECT_SOURCE_DIR}/src")
+    add_test(NAME atlas_ai_creator_request_tests COMMAND atlas_ai_creator_request_tests)
+    add_executable(atlas_ai_creator_mesh_tests
+        "${CMAKE_CURRENT_FUNCTION_LIST_DIR}/test-ai-creator-mesh.cpp"
+        "${PROJECT_SOURCE_DIR}/src/slic3r/GUI/AtlasAICreator/PrimitiveGenerator.cpp")
+    target_link_libraries(atlas_ai_creator_mesh_tests test_common atlas_test_support)
+    target_compile_definitions(atlas_ai_creator_mesh_tests PRIVATE "ATLAS_SOURCE_ROOT=\"${PROJECT_SOURCE_DIR}\"")
+    add_test(NAME atlas_ai_creator_mesh_tests COMMAND atlas_ai_creator_mesh_tests)
     foreach(test_target IN ITEMS libslic3r_tests fff_print_tests sla_print_tests
             filament_group_tests
             support_material_on_wipe_tower_tests periodic_modifier_tests)
