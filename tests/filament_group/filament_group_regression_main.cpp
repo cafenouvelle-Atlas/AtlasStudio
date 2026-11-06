@@ -224,7 +224,11 @@ TEST_CASE("FilamentGroup golden regression", "[filament_group][golden]") {
         INFO("Case: " << tc.metadata.id);
         INFO("Base score: " << base.full_score);
         INFO("Actual score: " << eval.full_score);
-        INFO("Flush cost: " << eval.flush_cost);
+        INFO("Filament assignments (index -> nozzle): " << nlohmann::json(result.filament_map).dump());
+        INFO("Constraint violations: " << nlohmann::json(result.violations).dump());
+        INFO("Flush volume: " << eval.flush_cost);
+        INFO("Flush score: " << evaluate_score(eval.flush_cost, 0));
+        INFO("Change time: " << eval.change_time);
         INFO("Elapsed: " << result.elapsed_ms << " ms");
 
         int tolerance = std::max(50, (int)(base.full_score * 0.03));
