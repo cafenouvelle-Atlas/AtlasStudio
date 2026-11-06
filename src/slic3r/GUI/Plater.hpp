@@ -380,6 +380,8 @@ public:
     int  get_3mf_file_count(std::vector<fs::path> paths);
     void add_file();
     void add_model(bool imperial_units = false, std::string fname = "");
+    // Add local generated geometry without file-import metadata or preset changes.
+    bool add_generated_mesh(TriangleMesh mesh, const std::string& name);
     void import_sl1_archive();
     void extract_config_from_project();
     void load_gcode();

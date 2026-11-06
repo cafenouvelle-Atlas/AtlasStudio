@@ -1,4 +1,5 @@
 #include "MainFrame.hpp"
+#include "AtlasAICreator/CreatorPanel.hpp"
 #include "GLToolbar.hpp"
 #include <wx/panel.h>
 #include <wx/notebook.h>
@@ -1062,7 +1063,7 @@ void MainFrame::update_layout()
                 if(!preview_only_hint())
                     return;
             }
-            else if (evt.GetId() == tpCalibration) {
+            else if (evt.GetId() == m_tabpanel->FindPage(m_calibration)) {
                 m_calibration->update_all();
             } else if (evt.GetId() == tpPreview && !wxGetApp().check_slice_version_policy()) {
                 if (wxWindow *cur = m_tabpanel->GetCurrentPage()) cur->SetFocus();
@@ -1552,6 +1553,13 @@ void MainFrame::init_tabpanel()
     if (!wxGetApp().is_fila_manager_disabled()) {
         m_web_device = new DeviceWebPage(m_tabpanel);
         m_tabpanel->AddPage(m_web_device, _L("Filament Manager"), std::string("tab_filament_active"), std::string("tab_filament_active"), false);
+    }
+
+    // Append by window identity: optional existing tabs have dynamic indices.
+    if (wxGetApp().is_editor()) {
+        m_ai_creator = new AtlasAICreatorPanel(m_tabpanel, m_plater);
+        m_tabpanel->AddPage(m_ai_creator, _L("Atlas AI Creator"),
+                           "tab_3d_active", "tab_3d_active", false);
     }
 
     if (m_plater) {
@@ -2811,6 +2819,8 @@ void MainFrame::on_sys_color_changed()
     wxGetApp().plater()->sys_color_changed();
     m_monitor->on_sys_color_changed();
     m_calibration->on_sys_color_changed();
+    if (m_ai_creator)
+        m_ai_creator->on_sys_color_changed();
     if (m_web_device) m_web_device->on_sys_color_changed();
     // update Tabs
     for (auto tab : wxGetApp().tabs_list)
