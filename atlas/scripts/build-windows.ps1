@@ -68,9 +68,9 @@ try {
     if ($Stage -in @('All', 'Build')) {
         # Validate the real profile with the engine before the much longer GUI build.
         # The complete build and test stages still run after this mandatory check.
-        Invoke-Checked cmake @('--build', 'build', '--target', 'atlas_centauri_profile_tests', '--config', 'Release', '--parallel', '2')
+        Invoke-Checked cmake @('--build', 'build', '--target', 'atlas_centauri_profile_tests', 'atlas_ai_creator_request_tests', 'atlas_ai_creator_mesh_tests', '--config', 'Release', '--parallel', '2')
         $env:PATH = "$install;$deps/usr/local/bin;$deps/usr/local/bin/occt;$env:PATH"
-        Invoke-Checked ctest @('--test-dir', 'build', '-C', 'Release', '--output-on-failure', '-R', '^atlas_centauri_profile_tests$', '--no-tests=error', '--timeout', '600', '--output-junit', "$root/atlas-logs/centauri-preflight.xml")
+        Invoke-Checked ctest @('--test-dir', 'build', '-C', 'Release', '--output-on-failure', '-R', '^(atlas_centauri_profile_tests|atlas_ai_creator_request_tests|atlas_ai_creator_mesh_tests)$', '--no-tests=error', '--timeout', '600', '--output-junit', "$root/atlas-logs/centauri-preflight.xml")
         Invoke-Checked cmake @('--build', 'build', '--target', 'install', '--config', 'Release', '--parallel', '2')
     }
     if ($Stage -in @('All', 'Test')) {
@@ -106,6 +106,13 @@ remain required. See ATLAS-BUILD-STATUS.md in the development workspace.
             $profileCases[0].SelectNodes('error').Count -gt 0 -or
             $profileCases[0].SelectNodes('skipped').Count -gt 0) {
             throw 'Centauri Carbon native load/slice/export test did not pass; package blocked.'
+        }
+
+        foreach ($creatorTest in @('atlas_ai_creator_request_tests', 'atlas_ai_creator_mesh_tests')) {
+            $cases = @($testReport.SelectNodes("//testcase[@name='$creatorTest']"))
+            if ($cases.Count -ne 1 -or $cases[0].SelectNodes('failure|error|skipped').Count -gt 0) {
+                throw "Atlas AI Creator test did not pass: $creatorTest; package blocked."
+            }
         }
 
         $testStatus = "Selected CTest results: tests=$($suite.GetAttribute('tests')); failures=$($suite.GetAttribute('failures')); errors=$($suite.GetAttribute('errors')); disabled=$($suite.GetAttribute('disabled'))."

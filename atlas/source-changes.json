@@ -1,0 +1,16 @@
+{
+  "description": "Atlas AI Creator primitive milestone, 2026-11-06. Exact LF-normalized source hashes; unrelated upstream changes remain forbidden. Verify before branding/profile build overlays.",
+  "sha256_lf": {
+    "src/slic3r/CMakeLists.txt": "5cdc4e6da7b1efee00d700a5846bea572fa3bea6d9839fa826af9b19c6fdd6ab",
+    "src/slic3r/GUI/MainFrame.cpp": "fb6fbc927a7d5735984b249ed573e6919d61b3469809b94b003d0d311bdacca7",
+    "src/slic3r/GUI/MainFrame.hpp": "21f930298e27bd16aa0620e6107d4283866b76d52f3b976787ea409eefffe75b",
+    "src/slic3r/GUI/Plater.cpp": "69a6065339a97a5b00955812ded323367dfa6dc9b96edee0f0aa1a0e4624d21f",
+    "src/slic3r/GUI/Plater.hpp": "0690fe7f135c16445348b068871788d1846df8f216c5a694eb9723b3967c4fb5",
+    "src/slic3r/GUI/AtlasAICreator/CreatorPanel.cpp": "e3fb7f22a3add7eb65794e396c5dd73fe3337a86c83ba4aa147ef7b11d468a76",
+    "src/slic3r/GUI/AtlasAICreator/CreatorPanel.hpp": "74b249dff49c686d8c40835c253f4de86060a0c6de09f9b248693893a707d670",
+    "src/slic3r/GUI/AtlasAICreator/PrimitiveGenerator.cpp": "faaf98caaee226545345819c5534ceaa463bcf160030269d944306a6ebc349ed",
+    "src/slic3r/GUI/AtlasAICreator/PrimitiveGenerator.hpp": "ac49932fc0f6106ba0b153adb1e63dbdb2db1b27fb105ea888f593bf5ecffe95",
+    "src/slic3r/GUI/AtlasAICreator/PrimitiveRequest.hpp": "7f2fed2f3176d2353c5c8cf87bcf516263fce9ca0f4ba66103559bed0d72a15d",
+    "src/slic3r/GUI/AtlasAICreator/ModelSearch.hpp": "1a7199a68e9bd1d566cd9cf66ef5343bf7a90edefdc1a9b7a43391a95c0aa5ff"
+  }
+}
