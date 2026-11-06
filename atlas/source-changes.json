@@ -11,6 +11,7 @@
     "src/slic3r/GUI/AtlasAICreator/PrimitiveGenerator.cpp": "faaf98caaee226545345819c5534ceaa463bcf160030269d944306a6ebc349ed",
     "src/slic3r/GUI/AtlasAICreator/PrimitiveGenerator.hpp": "ac49932fc0f6106ba0b153adb1e63dbdb2db1b27fb105ea888f593bf5ecffe95",
     "src/slic3r/GUI/AtlasAICreator/PrimitiveRequest.hpp": "7f2fed2f3176d2353c5c8cf87bcf516263fce9ca0f4ba66103559bed0d72a15d",
-    "src/slic3r/GUI/AtlasAICreator/ModelSearch.hpp": "1a7199a68e9bd1d566cd9cf66ef5343bf7a90edefdc1a9b7a43391a95c0aa5ff"
+    "src/slic3r/GUI/AtlasAICreator/ModelSearch.hpp": "1a7199a68e9bd1d566cd9cf66ef5343bf7a90edefdc1a9b7a43391a95c0aa5ff",
+    "tests/filament_group/filament_group_regression_main.cpp": "8a5e0f71b7e6ab82c5a4575ba696768149fb395f5767cc25ba51229e43f8b549"
   }
 }
