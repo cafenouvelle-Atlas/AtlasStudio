@@ -2,7 +2,7 @@ name: Atlas Windows baseline
 on:
   workflow_dispatch:
   push:
-    branches: [atlas/main]
+    branches: [atlas/main, atlas/assistant-local]
   pull_request:
     branches: [atlas/main]
 permissions:
@@ -42,6 +42,10 @@ jobs:
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
           # Invalidate cached native libraries whenever the runner image changes.
           "image=$env:ImageVersion" >> $env:GITHUB_OUTPUT
+      - name: Build and smoke-test the Assistant workers
+        if: github.ref == 'refs/heads/atlas/assistant-local'
+        shell: pwsh
+        run: ./atlas/assistant/ci-stage.ps1 -Phase Build
       - name: Restore Windows dependencies
         id: deps
         uses: actions/cache/restore@v4
@@ -68,9 +72,13 @@ jobs:
       - name: Run upstream automated tests
         shell: pwsh
         run: ./atlas/scripts/build-windows.ps1 -Stage Test
+      - name: Stage the Assistant prototype and its sources
+        if: github.ref == 'refs/heads/atlas/assistant-local'
+        shell: pwsh
+        run: ./atlas/assistant/ci-stage.ps1 -Phase Stage
       - name: Package portable application and source
         id: package
-        if: always() && steps.compile.outcome == 'success'
+        if: always() && !cancelled() && steps.compile.outcome == 'success' && (github.ref != 'refs/heads/atlas/assistant-local' || success())
         shell: pwsh
         run: ./atlas/scripts/build-windows.ps1 -Stage Package
       - name: Upload development candidate and source
