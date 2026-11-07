@@ -20947,6 +20947,33 @@ bool Plater::up_to_date(bool saved, bool backup)
          || (p->up_to_date(saved, backup) && !Slic3r::has_other_changes(backup));
 }
 
+// Atlas AI Creator: reuse placement, object list, undo and slicing integration.
+bool Plater::add_generated_mesh(TriangleMesh mesh, const std::string& name)
+{
+    if (mesh.empty() || !can_add_model() || is_any_job_running() ||
+        only_gcode_mode() || using_exported_file() ||
+        p->view3D->get_canvas3d()->get_gizmos_manager().is_in_editing_mode(false))
+        return false;
+    Model generated;
+    generated.add_object(name.c_str(), "", std::move(mesh));
+    TakeSnapshot snapshot(this, "Atlas AI Creator: " + name);
+    const auto indices = p->load_model_objects(generated.objects);
+    if (indices.empty())
+        return false;
+    select_view_3D("3D");
+    wxGetApp().mainframe->select_tab(MainFrame::tp3DEditor);
+    auto* canvas = p->view3D->get_canvas3d();
+    canvas->update_instance_printable_state_for_objects(indices);
+    auto& selection = canvas->get_selection();
+    selection.clear();
+    for (size_t index : indices)
+        selection.add_object(static_cast<unsigned int>(index), false);
+    p->sidebar->obj_list()->update_selections();
+    canvas->update_gizmos_on_off_state();
+    wxGetApp().mainframe->update_title();
+    return true;
+}
+
 void Plater::add_model(bool imperial_units, std::string fname)
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " entry";

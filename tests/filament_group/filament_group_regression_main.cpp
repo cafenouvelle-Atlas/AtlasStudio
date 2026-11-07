@@ -224,12 +224,31 @@ TEST_CASE("FilamentGroup golden regression", "[filament_group][golden]") {
         INFO("Case: " << tc.metadata.id);
         INFO("Base score: " << base.full_score);
         INFO("Actual score: " << eval.full_score);
-        INFO("Flush cost: " << eval.flush_cost);
+        INFO("Filament assignments (index -> nozzle): " << nlohmann::json(result.filament_map).dump());
+        INFO("Constraint violations: " << nlohmann::json(result.violations).dump());
+        INFO("Flush volume: " << eval.flush_cost);
+        INFO("Flush score: " << evaluate_score(eval.flush_cost, 0));
+        INFO("Change time: " << eval.change_time);
         INFO("Elapsed: " << result.elapsed_ms << " ms");
 
         int tolerance = std::max(50, (int)(base.full_score * 0.03));
 
         REQUIRE(result.constraints_ok);
+        // Isolate the post-search AMS ranking for over-budget Flush results.
+        // The same search and evaluator run with only that ranking bypassed.
+        if (tc.context.group_info.mode == FGMode::FlushMode &&
+            eval.full_score > base.full_score + tolerance) {
+            auto without_ams_ranking = tc.context;
+            without_ams_ranking.group_info.has_filament_switcher = true;
+            const auto pre_ams = run_and_evaluate(without_ams_ranking);
+            const auto pre_ams_score = full_evaluate_map(tc.context, pre_ams.filament_map);
+            UNSCOPED_INFO("Pre-AMS map: " << nlohmann::json(pre_ams.filament_map).dump());
+            UNSCOPED_INFO("Pre-AMS score: " << pre_ams_score.full_score
+                          << "; flush: " << pre_ams_score.flush_cost
+                          << "; change time: " << pre_ams_score.change_time
+                          << "; violations: " << nlohmann::json(pre_ams.violations).dump());
+        }
+
         REQUIRE(eval.full_score <= base.full_score + tolerance);
         REQUIRE(result.elapsed_ms < 20000.0);
     }

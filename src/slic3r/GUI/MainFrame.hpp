@@ -52,6 +52,7 @@ class MainFrame;
 class ParamsDialog;
 class FilamentGroupPopup;
 class DeviceWebPage;
+class AtlasAICreatorPanel;
 
 enum QuickSlice
 {
@@ -383,6 +384,7 @@ public:
     BBLTopbar*            m_topbar{ nullptr };
     PrintHostQueueDialog* printhost_queue_dlg() { return m_printhost_queue_dlg; }
     Plater*               m_plater { nullptr };
+    AtlasAICreatorPanel*  m_ai_creator { nullptr };
     //BBS: GUI refactor
     MonitorPanel*         m_monitor{ nullptr };
 

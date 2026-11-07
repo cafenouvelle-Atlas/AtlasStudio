@@ -32,7 +32,7 @@ jobs:
           # Chocolatey changes are not inherited by this running shell.
           'C:\Strawberry\perl\bin' >> $env:GITHUB_PATH
           'C:\Strawberry\c\bin' >> $env:GITHUB_PATH
-      - name: Verify unchanged upstream application
+      - name: Verify pinned upstream and recorded Atlas integration
         run: python atlas/scripts/verify_baseline.py
       - name: Verify Windows toolchain before long builds
         id: toolchain
