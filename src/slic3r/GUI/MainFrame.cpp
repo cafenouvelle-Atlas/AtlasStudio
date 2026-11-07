@@ -1,5 +1,8 @@
 #include "MainFrame.hpp"
 #include "AtlasAICreator/CreatorPanel.hpp"
+#ifdef _MSC_VER
+#include "AtlasAssistant/AssistantPanel.hpp"
+#endif
 #include "GLToolbar.hpp"
 #include <wx/panel.h>
 #include <wx/notebook.h>
@@ -1560,6 +1563,13 @@ void MainFrame::init_tabpanel()
         m_ai_creator = new AtlasAICreatorPanel(m_tabpanel, m_plater);
         m_tabpanel->AddPage(m_ai_creator, _L("Atlas AI Creator"),
                            "tab_3d_active", "tab_3d_active", false);
+#ifdef _MSC_VER
+        wxString assistant_enabled;
+        if (wxGetEnv("ATLAS_ENABLE_ASSISTANT", &assistant_enabled) && assistant_enabled == "1") {
+            auto* assistant = new AtlasAssistantPanel(m_tabpanel, m_plater);
+            m_tabpanel->AddPage(assistant, _L("Atlas Assistant"), "tab_3d_active", "tab_3d_active", false);
+        }
+#endif
     }
 
     if (m_plater) {
