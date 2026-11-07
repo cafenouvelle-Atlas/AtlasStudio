@@ -175,7 +175,8 @@ public:
         const std::vector<int>& u_nodes,
         const std::vector<int>& v_nodes,
         const std::vector<int>& v_capacity,
-        const std::unordered_map<int, std::vector<int>>& uv_unlink_limits = {});
+        const std::unordered_map<int, std::vector<int>>& uv_unlink_limits = {},
+        const std::vector<int>& v_groups = {}, const std::vector<int>& group_capacity = {});
 
     std::vector<int> solve();
     ~MatchModeGroupSolver();

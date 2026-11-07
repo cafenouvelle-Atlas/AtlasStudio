@@ -737,15 +737,17 @@ namespace Slic3r
     {
     }
 
-    MatchModeGroupSolver::MatchModeGroupSolver(const std::vector<std::vector<float>>& matrix_, const std::vector<int>& u_nodes, const std::vector<int>& v_nodes, const std::vector<int>& v_capacity, const std::unordered_map<int, std::vector<int>>& uv_unlink_limits)
+    MatchModeGroupSolver::MatchModeGroupSolver(const std::vector<std::vector<float>>& matrix_, const std::vector<int>& u_nodes, const std::vector<int>& v_nodes, const std::vector<int>& v_capacity, const std::unordered_map<int, std::vector<int>>& uv_unlink_limits, const std::vector<int>& v_groups, const std::vector<int>& group_capacity)
     {
         assert(v_nodes.size() == v_capacity.size());
         m_solver = std::make_unique<MinCostMaxFlow>();
-        m_solver->matrix = matrix_;;
+        m_solver->matrix = matrix_;
         m_solver->l_nodes = u_nodes;
         m_solver->r_nodes = v_nodes;
 
-        m_solver->total_nodes = u_nodes.size() + v_nodes.size() + 2;
+        assert(v_groups.empty() || v_groups.size() == v_nodes.size());
+        const int group_start = static_cast<int>(u_nodes.size() + v_nodes.size());
+        m_solver->total_nodes = group_start + static_cast<int>(group_capacity.size()) + 2;
 
         m_solver->source_id = m_solver->total_nodes - 2;
         m_solver->sink_id = m_solver->total_nodes - 1;
@@ -757,9 +759,13 @@ namespace Slic3r
         for (int i = 0; i < m_solver->l_nodes.size(); ++i)
             m_solver->add_edge(m_solver->source_id, i, 1, 0);
 
-        // add edge from right nodes to sink,cost to 0
-        for (int i = 0; i < m_solver->r_nodes.size(); ++i)
-            m_solver->add_edge(m_solver->l_nodes.size() + i, m_solver->sink_id, v_capacity[i], 0);
+        // Spools on one extruder share its capacity when groups are supplied.
+        for (int i = 0; i < static_cast<int>(v_nodes.size()); ++i) {
+            const int target = v_groups.empty() ? m_solver->sink_id : group_start + v_groups[i];
+            m_solver->add_edge(static_cast<int>(u_nodes.size()) + i, target, v_capacity[i], 0);
+        }
+        for (int i = 0; i < static_cast<int>(group_capacity.size()); ++i)
+            m_solver->add_edge(group_start + i, m_solver->sink_id, group_capacity[i], 0);
 
         // add edge from left node to right nodes
         for (int i = 0; i < m_solver->l_nodes.size(); ++i) {
