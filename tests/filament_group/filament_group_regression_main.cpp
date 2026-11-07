@@ -233,6 +233,7 @@ TEST_CASE("FilamentGroup golden regression", "[filament_group][golden]") {
 
         int tolerance = std::max(50, (int)(base.full_score * 0.03));
 
+        REQUIRE(result.constraints_ok);
         // Isolate the post-search AMS ranking for over-budget Flush results.
         // The same search and evaluator run with only that ranking bypassed.
         if (tc.context.group_info.mode == FGMode::FlushMode &&
@@ -248,7 +249,6 @@ TEST_CASE("FilamentGroup golden regression", "[filament_group][golden]") {
                           << "; violations: " << nlohmann::json(pre_ams.violations).dump());
         }
 
-        REQUIRE(result.constraints_ok);
         REQUIRE(eval.full_score <= base.full_score + tolerance);
         REQUIRE(result.elapsed_ms < 20000.0);
     }
