@@ -233,6 +233,21 @@ TEST_CASE("FilamentGroup golden regression", "[filament_group][golden]") {
 
         int tolerance = std::max(50, (int)(base.full_score * 0.03));
 
+        // Isolate the post-search AMS ranking for over-budget Flush results.
+        // The same search and evaluator run with only that ranking bypassed.
+        if (tc.context.group_info.mode == FGMode::FlushMode &&
+            eval.full_score > base.full_score + tolerance) {
+            auto without_ams_ranking = tc.context;
+            without_ams_ranking.group_info.has_filament_switcher = true;
+            const auto pre_ams = run_and_evaluate(without_ams_ranking);
+            const auto pre_ams_score = full_evaluate_map(tc.context, pre_ams.filament_map);
+            UNSCOPED_INFO("Pre-AMS map: " << nlohmann::json(pre_ams.filament_map).dump());
+            UNSCOPED_INFO("Pre-AMS score: " << pre_ams_score.full_score
+                          << "; flush: " << pre_ams_score.flush_cost
+                          << "; change time: " << pre_ams_score.change_time
+                          << "; violations: " << nlohmann::json(pre_ams.violations).dump());
+        }
+
         REQUIRE(result.constraints_ok);
         REQUIRE(eval.full_score <= base.full_score + tolerance);
         REQUIRE(result.elapsed_ms < 20000.0);
