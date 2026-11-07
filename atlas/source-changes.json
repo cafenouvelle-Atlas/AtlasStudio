@@ -1,8 +1,8 @@
 {
-  "description": "Atlas AI Creator primitive milestone, 2026-11-06. Exact LF-normalized source hashes; unrelated upstream changes remain forbidden. Verify before branding/profile build overlays.",
+  "description": "Scoped Atlas Creator, filament grouping repair and opt-in local Assistant changes. Exact LF-normalized source hashes; other protected upstream files must remain unchanged.",
   "sha256_lf": {
-    "src/slic3r/CMakeLists.txt": "5cdc4e6da7b1efee00d700a5846bea572fa3bea6d9839fa826af9b19c6fdd6ab",
-    "src/slic3r/GUI/MainFrame.cpp": "fb6fbc927a7d5735984b249ed573e6919d61b3469809b94b003d0d311bdacca7",
+    "src/slic3r/CMakeLists.txt": "fcd0b33e3d3cc143b236f7d1f6d9c8aafa954bbee5211d98210ff3613837cfe5",
+    "src/slic3r/GUI/MainFrame.cpp": "027032bee2bb2175c8b3d8d6d9cc4be70e682fda6180b9fa78bcbee1f1e8f5bd",
     "src/slic3r/GUI/MainFrame.hpp": "21f930298e27bd16aa0620e6107d4283866b76d52f3b976787ea409eefffe75b",
     "src/slic3r/GUI/Plater.cpp": "69a6065339a97a5b00955812ded323367dfa6dc9b96edee0f0aa1a0e4624d21f",
     "src/slic3r/GUI/Plater.hpp": "0690fe7f135c16445348b068871788d1846df8f216c5a694eb9723b3967c4fb5",
@@ -15,6 +15,10 @@
     "tests/filament_group/filament_group_regression_main.cpp": "3b19ba4553fd6dab1fc6c707a5559b7fe02fd06e3196385c12ac785478b8812c",
     "src/libslic3r/GCode/ToolOrderUtils.hpp": "41bae08a92daf8bd0a57d1b1dc9daea95440bd4829855f8132de2bfbfa690403",
     "src/libslic3r/GCode/ToolOrderUtils.cpp": "96ceeb5d243213290f3fa3bfbc1311d7e6ae2aff6476f9ad2ee85284f9b082ad",
-    "src/libslic3r/FilamentGroup.cpp": "ece0eeb7e2ac29b42ea87e1e9ebcd484ebcc31f46585f65c81a9acd95b2e2ccb"
+    "src/libslic3r/FilamentGroup.cpp": "ece0eeb7e2ac29b42ea87e1e9ebcd484ebcc31f46585f65c81a9acd95b2e2ccb",
+    "src/slic3r/GUI/AtlasAssistant/AssistantPanel.cpp": "51937f203b9f21c5251e645172ca33c1ddef6e9c30093c67f5b3226ab46dddcc",
+    "src/slic3r/GUI/AtlasAssistant/AssistantPanel.hpp": "0384ba395539f35152b5e06097b70c5d870d5673945976fd2ca0541c0b7cea60",
+    "src/slic3r/GUI/AtlasAssistant/Protocol.hpp": "d47a1c460c6d3415e04582dc68401915a83e95f75c7dd1dbc1fb77a543151167",
+    "src/slic3r/GUI/AtlasAssistant/VoiceProtocol.hpp": "8163965766adafe863c3b2abdcada510b03ed2a59f8cf253605b7b5f91b9c1dc"
   }
 }
