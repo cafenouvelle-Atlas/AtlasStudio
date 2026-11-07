@@ -1,0 +1,28 @@
+# SPDX-License-Identifier: AGPL-3.0-only
+cmake_minimum_required(VERSION 3.21)
+project(AtlasAssistantWorker LANGUAGES C CXX)
+set(LLAMA_SOURCE_DIR "" CACHE PATH "Path to a reviewed llama.cpp v0.9.0 checkout")
+if(NOT EXISTS "${LLAMA_SOURCE_DIR}/include/llama.h")
+    message(FATAL_ERROR "Set LLAMA_SOURCE_DIR to the pinned local llama.cpp checkout.")
+endif()
+set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
+foreach(flag LLAMA_BUILD_COMMON LLAMA_BUILD_TESTS LLAMA_BUILD_TOOLS LLAMA_BUILD_EXAMPLES
+             LLAMA_BUILD_SERVER LLAMA_BUILD_APP LLAMA_OPENSSL LLAMA_CURL GGML_BACKEND_DL GGML_NATIVE GGML_CUDA GGML_METAL
+             GGML_VULKAN GGML_OPENCL GGML_RPC GGML_OPENMP GGML_BLAS GGML_WEBGPU GGML_SYCL
+             GGML_HIP GGML_MUSA)
+    set(${flag} OFF CACHE BOOL "" FORCE)
+endforeach()
+add_subdirectory("${LLAMA_SOURCE_DIR}" llama EXCLUDE_FROM_ALL)
+add_library(atlas_assistant_generate STATIC Generate.cpp)
+target_include_directories(atlas_assistant_generate PUBLIC ../../src)
+target_compile_features(atlas_assistant_generate PUBLIC cxx_std_17)
+target_link_libraries(atlas_assistant_generate PUBLIC llama)
+if(WIN32)
+    add_executable(atlas-assistant-worker worker.cpp)
+    target_link_libraries(atlas-assistant-worker PRIVATE atlas_assistant_generate)
+endif()
+option(ATLAS_ASSISTANT_SMOKE "Build the real-model local inference smoke check" OFF)
+if(ATLAS_ASSISTANT_SMOKE)
+    add_executable(atlas-assistant-smoke smoke.cpp)
+    target_link_libraries(atlas-assistant-smoke PRIVATE atlas_assistant_generate)
+endif()

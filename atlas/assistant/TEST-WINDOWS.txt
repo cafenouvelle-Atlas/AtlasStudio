@@ -1,0 +1,21 @@
+Atlas Studio - Windows x64 Assistant prototype
+
+Extract the entire atlas-studio-windows-x64.zip. Double-click
+"Start Atlas Assistant.cmd" and open the "Atlas Assistant" tab.
+
+Download these model files once, to a local folder on a fixed drive:
+Chat: https://huggingface.co/Qwen/Qwen2.5-0.5B-Instruct-GGUF/resolve/main/qwen2.5-0.5b-instruct-q4_k_m.gguf
+Voice: https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-tiny.en.bin
+
+Choose each downloaded file with its model button. The app does not
+download models itself. You can disconnect the internet after setup.
+
+1. Send "What is 2 + 2?" and check that the reply is 4.
+2. Hold the talk button, speak, release, and edit the transcript if needed.
+3. Enable spoken replies and send a message. Try Stop during playback.
+4. Open or save a project, add a note in Project memory, reopen the project,
+   and check that the note remains. Save an empty note to delete it.
+5. Try AI Creator and the normal offline slice, preview, and export flow.
+
+This is a test build; do not send physical print jobs. The CI test uses a
+recorded voice fixture. A microphone and Windows voice must be tested by you.
