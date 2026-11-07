@@ -1258,11 +1258,53 @@ namespace Slic3r
                 is_extruder_filament_compatible(used_filament_idx, machine_filament_list[machine_filament_idx].extruder_id);
             });
 
+        // Preserve ordinary matching. Only retry if its finished assignment
+        // exceeds a configured extruder capacity.
+        auto enforce_extruder_capacity = [&]() {
+            auto capacity = ctx.machine_info.max_group_size;
+            const auto all_count = static_cast<int>(used_filaments.size());
+            capacity.resize(extruder_filament_count.size(), all_count);
+            bool over_capacity = false;
+            for (size_t e = 0; e < capacity.size(); ++e) {
+                capacity[e] = std::max(0, std::min(capacity[e], all_count));
+                over_capacity |= extruder_filament_count[e] > capacity[e];
+            }
+            if (!over_capacity)
+                return group;
+
+            std::vector<int> all_nodes(used_filaments.size());
+            std::iota(all_nodes.begin(), all_nodes.end(), 0);
+            std::vector<int> spool_extruders;
+            spool_extruders.reserve(machine_filament_list.size());
+            for (const auto& spool : machine_filament_list)
+                spool_extruders.push_back(spool.extruder_id);
+            const auto compatible = build_unlink_limits(all_nodes, r_nodes,
+                [&](int filament, int spool) {
+                    return is_extruder_filament_compatible(filament, spool_extruders[spool]);
+                });
+
+            auto try_capacity = [&](const auto& limits) {
+                MatchModeGroupSolver solver(match_cost_matrix, all_nodes, r_nodes,
+                    machine_filament_capacity, limits, spool_extruders, capacity);
+                const auto matches = solver.solve();
+                if (std::find(matches.begin(), matches.end(), MaxFlowGraph::INVALID_ID) != matches.end())
+                    return false;
+                for (size_t idx = 0; idx < matches.size(); ++idx)
+                    group[used_filaments[idx]] = spool_extruders[r_nodes[matches[idx]]];
+                return true;
+            };
+            // Relax type/support preferences only if exact matching cannot fit.
+            // If even compatible matching is infeasible, retain the legacy fallback.
+            if (!try_capacity(unlink_limits_full))
+                try_capacity(compatible);
+            return group;
+        };
+
         {
             MatchModeGroupSolver s(match_cost_matrix, l_nodes, r_nodes, machine_filament_capacity, unlink_limits_full);
             ungrouped_filaments = optimize_map_to_machine_filament(s.solve(), l_nodes, r_nodes,group);
             if (ungrouped_filaments.empty())
-                return group;
+                return enforce_extruder_capacity();
         }
 
         // additionally remove type limits
@@ -1275,7 +1317,7 @@ namespace Slic3r
             MatchModeGroupSolver s(match_cost_matrix, l_nodes, r_nodes, machine_filament_capacity, unlink_limits);
             ungrouped_filaments = optimize_map_to_machine_filament(s.solve(), l_nodes, r_nodes, group);
             if (ungrouped_filaments.empty())
-                return group;
+                return enforce_extruder_capacity();
         }
 
         // remove all limits
@@ -1291,7 +1333,7 @@ namespace Slic3r
             }
         }
 
-        return group;
+        return enforce_extruder_capacity();
     }
 
     std::vector<int> FilamentGroup::calc_filament_group_for_flush(int* cost)
@@ -1307,8 +1349,18 @@ namespace Slic3r
             used_filament_info.emplace_back(ctx.model_info.filament_info[f]);
         }
 
-        ret = select_best_group_for_ams(memoryed_maps, ctx.nozzle_info.nozzle_list, used_filaments, used_filament_info, ctx.machine_info.machine_filament_info, ctx.group_info.has_filament_switcher);
-        return ret;
+        auto ams_map = select_best_group_for_ams(memoryed_maps, ctx.nozzle_info.nozzle_list, used_filaments,
+            used_filament_info, ctx.machine_info.machine_filament_info, ctx.group_info.has_filament_switcher);
+        if (ctx.group_info.strategy == FGStrategy::BestCost && ams_map != ret) {
+            // AMS matching may break a cost tie, but must not worsen the
+            // purge/time objective selected by BestCost.
+            int ams_flush = 0;
+            const double ams_score = full_evaluate(used_filaments, ams_map, ctx, get_custom_seq, &ams_flush);
+            if (ams_score > full_evaluate(used_filaments, ret, ctx, get_custom_seq))
+                return ret;
+            if (cost) *cost = ams_flush;
+        }
+        return ams_map;
     }
 
     std::vector<int> FilamentGroup::calc_filament_group_for_tpu(int *cost) {
