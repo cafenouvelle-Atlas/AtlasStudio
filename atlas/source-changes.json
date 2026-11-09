@@ -16,7 +16,7 @@
     "src/libslic3r/GCode/ToolOrderUtils.hpp": "41bae08a92daf8bd0a57d1b1dc9daea95440bd4829855f8132de2bfbfa690403",
     "src/libslic3r/GCode/ToolOrderUtils.cpp": "96ceeb5d243213290f3fa3bfbc1311d7e6ae2aff6476f9ad2ee85284f9b082ad",
     "src/libslic3r/FilamentGroup.cpp": "ece0eeb7e2ac29b42ea87e1e9ebcd484ebcc31f46585f65c81a9acd95b2e2ccb",
-    "src/slic3r/GUI/AtlasAssistant/AssistantPanel.cpp": "c0149d46bdbb0cf39e35ab1f28c9d317b5b8e0f36cbbb9fe71c8164599b3a4b0",
+    "src/slic3r/GUI/AtlasAssistant/AssistantPanel.cpp": "f423b3a715855352be75a341706ceb2cb603115c3139ede90ff28d684e302a15",
     "src/slic3r/GUI/AtlasAssistant/AssistantPanel.hpp": "0384ba395539f35152b5e06097b70c5d870d5673945976fd2ca0541c0b7cea60",
     "src/slic3r/GUI/AtlasAssistant/Protocol.hpp": "d47a1c460c6d3415e04582dc68401915a83e95f75c7dd1dbc1fb77a543151167",
     "src/slic3r/GUI/AtlasAssistant/VoiceProtocol.hpp": "8163965766adafe863c3b2abdcada510b03ed2a59f8cf253605b7b5f91b9c1dc"
