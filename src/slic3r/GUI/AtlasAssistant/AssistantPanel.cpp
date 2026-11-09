@@ -1,4 +1,11 @@
 // SPDX-License-Identifier: AGPL-3.0-only
+// The Windows speech SDK uses an unqualified byte typedef. Include it before
+// the GUI headers, which can bring std::byte into unqualified lookup.
+#include <windows.h>
+#include <sapi.h>
+#include <bcrypt.h>
+#include <mmsystem.h>
+
 #include "AssistantPanel.hpp"
 #include "Protocol.hpp"
 #include "VoiceProtocol.hpp"
@@ -17,10 +24,6 @@
 #include <wx/textctrl.h>
 #include <wx/textdlg.h>
 #include <wx/timer.h>
-#include <windows.h>
-#include <bcrypt.h>
-#include <mmsystem.h>
-#include <sapi.h>
 #include <algorithm>
 #include <array>
 #include <cstring>
@@ -55,13 +58,13 @@ bool local_file(const wxString& path, unsigned limit)
     return size != wxInvalidSize && size.GetValue() > 0 && size.GetValue() <= limit * mib;
 }
 
-struct Worker {
+struct AssistantWorkerProcess {
     HANDLE map = nullptr, process = nullptr, job = nullptr;
     void* view = nullptr;
     std::wstring key;
     ULONGLONG deadline = 0;
 
-    ~Worker() { close(); }
+    ~AssistantWorkerProcess() { close(); }
 
     void close()
     {
@@ -170,7 +173,7 @@ struct AtlasAssistantPanel::State {
     wxCheckBox* speak;
     wxString model, whisper, project, pending;
     wxString last_prompt, last_reply;
-    Worker worker;
+    AssistantWorkerProcess worker;
     enum class Activity { idle, listening, transcription, generation, speaking };
     Activity activity = Activity::idle;
     HWAVEIN microphone = nullptr;
