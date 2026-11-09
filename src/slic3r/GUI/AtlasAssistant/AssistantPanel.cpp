@@ -2,8 +2,8 @@
 #include "AssistantPanel.hpp"
 #include "Protocol.hpp"
 #include "VoiceProtocol.hpp"
-#include "GUI/I18N.hpp"
-#include "GUI/Plater.hpp"
+#include "slic3r/GUI/I18N.hpp"
+#include "slic3r/GUI/Plater.hpp"
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/file.h>
