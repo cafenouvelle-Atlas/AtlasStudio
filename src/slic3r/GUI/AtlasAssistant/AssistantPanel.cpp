@@ -8,9 +8,16 @@
 
 #include "AssistantPanel.hpp"
 #include "Protocol.hpp"
+#include "CommandBroker.hpp"
 #include "VoiceProtocol.hpp"
 #include "slic3r/GUI/I18N.hpp"
 #include "slic3r/GUI/Plater.hpp"
+#include "slic3r/GUI/BackgroundSlicingProcess.hpp"
+#include "slic3r/GUI/GUI_App.hpp"
+#include "slic3r/GUI/GLCanvas3D.hpp"
+#include "slic3r/GUI/MainFrame.hpp"
+#include "slic3r/GUI/NotificationManager.hpp"
+#include "slic3r/GUI/PartPlate.hpp"
 #include <wx/button.h>
 #include <wx/checkbox.h>
 #include <wx/file.h>
@@ -169,12 +176,17 @@ struct AtlasAssistantPanel::State {
     wxTimer timer;
     wxTextCtrl *history, *input;
     wxStaticText* status;
-    wxButton *select_chat, *select_voice, *talk, *send, *stop, *clear, *memory;
+    wxButton *select_chat, *select_voice, *talk, *send, *command, *stop, *clear, *memory;
     wxCheckBox* speak;
     wxString model, whisper, project, pending;
     wxString last_prompt, last_reply;
     AssistantWorkerProcess worker;
-    enum class Activity { idle, listening, transcription, generation, speaking };
+    CommandBroker broker;
+    ObjectID command_target;
+    bool command_speech = false;
+    bool preview_speech = false;
+    wxString speech_completion;
+    enum class Activity { idle, listening, transcription, generation, command_proposal, speaking };
     Activity activity = Activity::idle;
     HWAVEIN microphone = nullptr;
     WAVEHDR audio {};
@@ -206,10 +218,12 @@ struct AtlasAssistantPanel::State {
         layout->Add(input, 0, wxEXPAND | wxALL, 10);
         auto* actions = new wxBoxSizer(wxHORIZONTAL);
         send = new wxButton(&owner, wxID_ANY, _L("Send"));
+        command = new wxButton(&owner, wxID_ANY, _L("Run command"));
+        command->SetToolTip(_L("Try: Slice status, Active plate, Select plate 2, or Open Preview."));
         talk = new wxButton(&owner, wxID_ANY, _L("Hold to talk"));
         stop = new wxButton(&owner, wxID_ANY, _L("Stop"));
         speak = new wxCheckBox(&owner, wxID_ANY, _L("Speak replies using Windows voice"));
-        for (auto* b : {send, talk, stop}) actions->Add(b, 0, wxRIGHT, 6);
+        for (auto* b : {send, command, talk, stop}) actions->Add(b, 0, wxRIGHT, 6);
         actions->Add(speak, 0, wxALIGN_CENTER_VERTICAL);
         layout->Add(actions, 0, wxLEFT | wxRIGHT | wxBOTTOM, 10);
         status = new wxStaticText(&owner, wxID_ANY, _L("Choose local model files to begin."));
@@ -223,6 +237,7 @@ struct AtlasAssistantPanel::State {
         memory->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { edit_memory(); });
         clear->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { clear_chat(); });
         send->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { request(); });
+        command->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { request_command(); });
         input->Bind(wxEVT_TEXT_ENTER, [this](wxCommandEvent&) { request(); });
         stop->Bind(wxEVT_BUTTON, [this](wxCommandEvent&) { cancel(_L("Stopped.")); });
         talk->Bind(wxEVT_LEFT_DOWN, [this](wxMouseEvent&) { talk->SetFocus(); if (listen()) talk->CaptureMouse(); });
@@ -275,6 +290,7 @@ struct AtlasAssistantPanel::State {
         select_chat->Enable(idle);
         select_voice->Enable(idle);
         send->Enable(idle && !model.empty());
+        command->Enable(idle);
         input->SetEditable(idle);
         talk->Enable((idle && !whisper.empty()) || activity == Activity::listening);
         memory->Enable(idle);
@@ -402,6 +418,161 @@ struct AtlasAssistantPanel::State {
         set(Activity::generation, _L("Generating a local reply…"));
     }
 
+    void reply_to_command(const wxString& reply, bool preview_opened = false)
+    {
+        if (history->GetLastPosition() > 24000) history->Clear();
+        history->AppendText(_L("Command: ") + pending + "\n" + _L("Atlas: ") + reply + "\n\n");
+        pending.clear();
+        input->Clear();
+        const bool speaking = speak->GetValue() && say(reply);
+        command_speech = speaking;
+        preview_speech = preview_opened && speaking;
+        speech_completion = reply;
+        set(speaking ? Activity::speaking : Activity::idle, reply);
+        if (preview_opened && plate->get_notification_manager()) {
+            const auto utf8 = reply.ToUTF8();
+            if (utf8.data()) plate->get_notification_manager()->push_notification(utf8.data());
+        }
+    }
+
+    wxString command_feedback(CommandStatus outcome) const
+    {
+        switch (outcome) {
+        case CommandStatus::clarify:
+            return _L("Please clarify. Use one command and specify one plate number when selecting a plate.");
+        case CommandStatus::malformed:
+            return _L("The local model returned an invalid command proposal. Try again.");
+        case CommandStatus::backend_failure:
+            return _L("The local command worker failed. Check the selected chat model and try again.");
+        default:
+            return _L("Unsupported request. Try Slice status, Active plate, Select plate 2, or Open Preview.");
+        }
+    }
+
+    bool navigation_available() const
+    {
+        const auto* canvas = plate ? plate->get_view3D_canvas3D() : nullptr;
+        return canvas && !canvas->get_gizmos_manager().is_running() && !canvas->is_layers_editing_enabled() &&
+            plate->printer_technology() == ptFFF && !plate->only_gcode_mode() &&
+            !plate->using_exported_file() && !slicing() && !plate->is_any_job_running() &&
+            !plate->background_process().running() && !plate->is_background_process_update_scheduled() &&
+            !plate->is_export_gcode_scheduled() && (plate->is_view3D_shown() || plate->is_preview_shown());
+    }
+
+    void execute_command(ActionProposal action)
+    {
+        // Both the button handler and this panel's wxTimer run on the UI thread.
+        if (!plate) {
+            reply_to_command(_L("The plate view is unavailable."));
+            return;
+        }
+        auto& plates = plate->get_partplate_list();
+        const int index = plates.get_curr_plate_index();
+        auto* current = index >= 0 && index < plates.get_plate_count() ? plates.get_plate(index) : nullptr;
+        if (!current) {
+            reply_to_command(_L("No active plate is available."));
+            return;
+        }
+
+        switch (action.command) {
+        case Command::get_active_plate:
+            reply_to_command(wxString::Format(_L("Plate %d is active."), index + 1));
+            return;
+        case Command::get_slice_status:
+            reply_to_command(wxString::Format(
+                slicing() ? _L("Slicing is in progress. The active plate is %d.") :
+                current->is_slice_result_valid() ? _L("Plate %d has a current slice result.") :
+                    _L("Plate %d has no current slice result."), index + 1));
+            return;
+        default:
+            break;
+        }
+
+        if (!navigation_available()) {
+            reply_to_command(_L("Navigation is unavailable while Atlas is busy or outside a normal filament project."));
+            return;
+        }
+        if (action.command == Command::select_plate) {
+            auto* target = action.plate > 0 && action.plate <= plates.get_plate_count() ?
+                plates.get_plate(action.plate - 1) : nullptr;
+            if (!target || target->id() != command_target) {
+                reply_to_command(_L("The requested plate is unavailable or changed. Specify the plate again."));
+                return;
+            }
+            Plater::SuppressSnapshots suppress(plate);
+            const bool selected = index == action.plate - 1 ||
+                plate->select_plate(action.plate - 1, /* need_slice */ false) == 0;
+            reply_to_command(selected ? wxString::Format(_L("Selected plate %d."), action.plate) :
+                _L("Atlas could not select that plate."));
+            return;
+        }
+        if (action.command == Command::navigate_preview) {
+            if (current->id() != command_target) {
+                reply_to_command(_L("The active plate changed. Ask to open Preview again."));
+                return;
+            }
+            auto* frame = wxGetApp().mainframe;
+            const bool opened = frame && frame->show_existing_preview();
+            reply_to_command(opened ? _L("Opened Preview for the active plate.") :
+                _L("An existing Preview is unavailable for this plate."), opened);
+        }
+    }
+
+    void request_command()
+    {
+        sync_project();
+        if (activity != Activity::idle) return;
+        pending = input->GetValue().Trim().Trim(false);
+        if (pending.empty()) return;
+        const auto text = pending.ToUTF8();
+        const auto decision = recognize_command(text.data() ? std::string_view(text.data(), text.length()) : std::string_view());
+        if (!decision.action) {
+            reply_to_command(command_feedback(decision.status));
+            return;
+        }
+        const auto action = *decision.action;
+        // Status queries need no inference and can answer while slicing.
+        if (action.command == Command::get_slice_status || action.command == Command::get_active_plate) {
+            execute_command(action);
+            return;
+        }
+        if (!navigation_available()) {
+            reply_to_command(_L("Navigation is unavailable while Atlas is busy or outside a normal filament project."));
+            return;
+        }
+        auto& plates = plate->get_partplate_list();
+        const int target_index = action.command == Command::select_plate ? action.plate - 1 : plates.get_curr_plate_index();
+        auto* target = target_index >= 0 && target_index < plates.get_plate_count() ? plates.get_plate(target_index) : nullptr;
+        if (!target) {
+            reply_to_command(_L("That plate is unavailable. Specify an existing plate number."));
+            return;
+        }
+        if (model.empty()) {
+            reply_to_command(_L("Choose a local chat model to use navigation commands."));
+            return;
+        }
+        if (!available(2200)) {
+            reply_to_command(_L("Free some memory before sending a navigation command."));
+            return;
+        }
+        if (!local_file(model, 1200) || !worker.prepare(sizeof(ChatExchange))) {
+            reply_to_command(command_feedback(CommandStatus::backend_failure));
+            return;
+        }
+        auto& chat = *static_cast<ChatExchange*>(worker.view);
+        chat.protocol_version = version;
+        if (!pack(chat, Role::system, wxString::FromUTF8(command_prompt)) ||
+            !pack(chat, Role::user, pending) ||
+            !worker.launch("atlas-assistant-worker.exe", model, 180, 2048)) {
+            worker.close();
+            reply_to_command(command_feedback(CommandStatus::backend_failure));
+            return;
+        }
+        command_target = target->id();
+        broker.begin(action);
+        set(Activity::command_proposal, _L("Recognized a navigation request. Checking the local command proposal…"));
+    }
+
     bool listen()
     {
         sync_project();
@@ -465,6 +636,9 @@ struct AtlasAssistantPanel::State {
         SecureZeroMemory(pcm.data(), sizeof(pcm));
         worker.close();
         if (speaker) speaker->Speak(nullptr, SPF_PURGEBEFORESPEAK, nullptr);
+        broker.cancel();
+        command_speech = false;
+        preview_speech = false;
         pending.clear();
         set(Activity::idle, label);
     }
@@ -503,12 +677,17 @@ struct AtlasAssistantPanel::State {
         if (!owner.IsShownOnScreen() && activity == Activity::idle) return;
         sync_project();
         if (activity == Activity::idle) return;
-        if (!owner.IsShownOnScreen() || slicing() || !available(400)) {
+        if ((!owner.IsShownOnScreen() && !preview_speech) ||
+            (slicing() && !command_speech) || !available(400)) {
             cancel(_L("Assistant stopped because the tab closed, slicing started, or available memory is low."));
             return;
         }
         if (activity == Activity::speaking) {
-            if (speaker->WaitUntilDone(0) != S_FALSE) set(Activity::idle, _L("Ready."));
+            if (speaker->WaitUntilDone(0) != S_FALSE) {
+                command_speech = false;
+                preview_speech = false;
+                set(Activity::idle, speech_completion);
+            }
             return;
         }
         if (activity == Activity::listening) {
@@ -523,6 +702,13 @@ struct AtlasAssistantPanel::State {
         if (wait == WAIT_TIMEOUT && GetTickCount64() < worker.deadline) return;
         DWORD code = 1;
         if (wait != WAIT_OBJECT_0 || !GetExitCodeProcess(worker.process, &code) || code) {
+            if (activity == Activity::command_proposal) {
+                worker.close();
+                const auto decision = broker.complete(std::nullopt);
+                reply_to_command(wait == WAIT_TIMEOUT ? _L("The local command worker timed out.") :
+                    command_feedback(decision.status));
+                return;
+            }
             cancel(wait == WAIT_TIMEOUT ? _L("Local worker timed out.") :
                 _L("Local worker failed. Check the selected model and installed worker."));
             return;
@@ -534,11 +720,23 @@ struct AtlasAssistantPanel::State {
                 text = wxString::FromUTF8(voice.text, voice.text_bytes).Trim().Trim(false);
             worker.close();
             if (!text.empty()) input->ChangeValue(text.Left(1024));
-            set(Activity::idle, text.empty() ? _L("No speech recognized.") : _L("Review your transcript, then press Send."));
+            set(Activity::idle, text.empty() ? _L("No speech recognized.") : _L("Review your transcript, then choose Send or Run command."));
             return;
         }
         const auto& chat = *static_cast<ChatExchange*>(worker.view);
         const auto result = chat.result;
+        if (activity == Activity::command_proposal) {
+            const auto decision = chat.protocol_version == version && result == Result::ok &&
+                                  chat.reply_bytes <= max_reply
+                ? broker.complete(std::string_view(chat.reply, chat.reply_bytes))
+                : broker.complete(std::nullopt);
+            worker.close();
+            if (decision.action)
+                execute_command(*decision.action);
+            else
+                reply_to_command(command_feedback(decision.status));
+            return;
+        }
         wxString reply;
         if (chat.protocol_version == version && result == Result::ok && chat.reply_bytes && chat.reply_bytes <= max_reply)
             reply = wxString::FromUTF8(chat.reply, chat.reply_bytes).Trim().Trim(false);
@@ -556,6 +754,7 @@ struct AtlasAssistantPanel::State {
         input->Clear();
         const bool should_speak = speak->GetValue();
         const bool speaking = should_speak && say(reply);
+        speech_completion = _L("Ready.");
         set(speaking ? Activity::speaking : Activity::idle,
             speaking ? _L("Speaking locally…") :
             should_speak ? _L("Reply ready. No Windows voice was available.") : _L("Reply ready."));
