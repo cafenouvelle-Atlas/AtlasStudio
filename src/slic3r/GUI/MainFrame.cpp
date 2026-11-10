@@ -42,6 +42,7 @@
 #include "I18N.hpp"
 #include "GLCanvas3D.hpp"
 #include "Plater.hpp"
+#include "BackgroundSlicingProcess.hpp"
 #include "WebViewDialog.hpp"
 #include "../Utils/Process.hpp"
 #include "format.hpp"
@@ -4357,6 +4358,44 @@ void MainFrame::select_tab(size_t tab/* = size_t(-1)*/)
 
     PERF_TRACE(std::string("Switching to ") + perf_tab_name(tab) + " tab");
     select(false);
+}
+
+bool MainFrame::show_existing_preview()
+{
+    if (!m_tabpanel || !m_plater || !m_param_panel || m_tabpanel->GetPageCount() <= tpPreview ||
+        m_tabpanel->GetPage(tpPreview) != m_plater || m_plater->printer_technology() != ptFFF ||
+        m_plater->only_gcode_mode() || m_plater->using_exported_file() ||
+        m_plater->is_any_job_running() || m_plater->is_background_process_slicing() ||
+        m_plater->background_process().running() || m_plater->is_background_process_update_scheduled() ||
+        m_plater->is_export_gcode_scheduled() ||
+        (!m_plater->is_view3D_shown() && !m_plater->is_preview_shown()))
+        return false;
+
+    const auto* canvas = m_plater->get_view3D_canvas3D();
+    if (!canvas || canvas->get_gizmos_manager().is_running() || canvas->is_layers_editing_enabled())
+        return false;
+
+    auto& plates = m_plater->get_partplate_list();
+    const int index = plates.get_curr_plate_index();
+    if (index < 0 || index >= plates.get_plate_count() || m_plater->model().objects.empty())
+        return false;
+    auto* plate = plates.get_curr_plate();
+    if (!plate || !plate->is_slice_result_valid() || !plate->has_printable_instances())
+        return false;
+
+    // SetSelection posts the normal Preview toolbar event, which can slice.
+    // ChangeSelection leaves the transition to the explicit no-slice call.
+    m_tabpanel->ChangeSelection(tpPreview);
+    if (m_tabpanel->GetSelection() != tpPreview)
+        return false;
+    m_last_selected_tab = tpPreview;
+    m_plater->select_view_3D("Preview", /* no_slice */ true);
+    m_param_panel->OnActivate();
+#ifndef __APPLE__
+    m_topbar->DisableUndoRedoItems();
+#endif
+    m_plater->SetFocus();
+    return m_plater->is_preview_shown();
 }
 
 void MainFrame::request_select_tab(TabPosition pos)
