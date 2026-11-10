@@ -33,7 +33,8 @@ $voiceBuild = Join-Path $BuildDirectory "voice"
 $generator = "Visual Studio 17 2022"
 
 Invoke-Checked cmake @("-S", $PSScriptRoot, "-B", $chatBuild, "-G", $generator, "-A", "x64", "-DLLAMA_SOURCE_DIR=$LlamaSource")
-Invoke-Checked cmake @("--build", $chatBuild, "--config", "Release", "--target", "atlas-assistant-worker", "--parallel", "2")
+Invoke-Checked cmake @("--build", $chatBuild, "--config", "Release", "--target", "atlas-assistant-worker", "atlas-command-broker-tests", "--parallel", "2")
+Invoke-Checked ctest @("--test-dir", $chatBuild, "-C", "Release", "--output-on-failure", "--no-tests=error")
 Invoke-Checked cmake @("-S", (Join-Path $PSScriptRoot "voice"), "-B", $voiceBuild, "-G", $generator, "-A", "x64", "-DWHISPER_SOURCE_DIR=$WhisperSource")
 Invoke-Checked cmake @("--build", $voiceBuild, "--config", "Release", "--target", "atlas-voice-worker", "--parallel", "2")
 

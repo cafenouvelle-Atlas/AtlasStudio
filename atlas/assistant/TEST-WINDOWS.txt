@@ -16,6 +16,17 @@ download models itself. You can disconnect the internet after setup.
 4. Open or save a project, add a note in Project memory, reopen the project,
    and check that the note remains. Save an empty note to delete it.
 5. Try AI Creator and the normal offline slice, preview, and export flow.
+6. With a two-plate filament project, type or record "Active plate",
+   "Slice status", or "Select plate two" and click Run command.
+   Check that the selected plate and on-screen reply match. Send still
+   submits ordinary chat, and voice commands use the editable transcript.
+7. Run "Open Preview" on an unsliced plate, then after a manual slice.
+   The first request should report that Preview is unavailable. The
+   second should open the existing result with no new slicing or export.
+8. Try "Select plate one or two", a nonexistent plate, and "Print plate 2".
+   Check that the current plate stays put. Press Stop during a navigation
+   proposal and check that it does not apply. Enable spoken replies to
+   check the microphone-to-command-to-speaker flow.
 
 This is a test build; do not send physical print jobs. The CI test uses a
 recorded voice fixture. A microphone and Windows voice must be tested by you.
